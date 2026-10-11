@@ -1,0 +1,22 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+.mypy_cache/
+.coverage
+htmlcov/
+.env
+tmp/
+uploads/
+models/
+# Ignore general audio files, including real or sensitive uploads.
+*.wav
+*.mp3
+
+# Only reviewed, small, non-sensitive fixtures in this explicit directory may
+# be committed. Never place real uploads here or force-add unreviewed audio.
+!samples/test-fixtures/
+!samples/test-fixtures/*.wav
+!samples/test-fixtures/*.mp3
