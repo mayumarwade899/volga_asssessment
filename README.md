@@ -61,10 +61,9 @@ tests/
 samples/                     # Small, non-sensitive fixtures only
 ```
 
-`PROJECT_PLAN.md` records the original assessment design. `.env.example`
-lists non-secret configuration examples. `requirements.txt` is the single
-dependency installation list; `pyproject.toml` contains package metadata and
-pytest/Ruff configuration.
+`.env.example` lists non-secret configuration examples. `requirements.txt` is
+the single dependency installation list; `pyproject.toml` contains package
+metadata and pytest/Ruff configuration.
 
 ## Prerequisites and setup
 
@@ -210,12 +209,22 @@ Current error responses are:
 - `500 Internal Server Error`: model loading or transcription failure. Internal
   paths and stack traces are not returned.
 
-Uploads are copied to temporary files in chunks, so the application does not
-read the entire audio file into one bytes object. Faster-Whisper receives the
-temporary path and performs file-based decoding. The multipart framework may
-still buffer or spool request data before application-level validation. A long
-recording can therefore use disk and keep the synchronous HTTP request open,
-but it is not decoded into one application-level buffer.
+Uploads are copied to temporary files in 64 KiB chunks. The configured
+500 MB limit is checked as the application copies those chunks into temporary
+storage, before an over-limit chunk is written. The application therefore does
+not create one complete in-memory bytes copy of the audio. Faster-Whisper
+receives the temporary path and performs file-based decoding.
+
+FastAPI/Starlette multipart parsing may still buffer or spool request data
+before this application-level check runs. A production deployment should also
+enforce an early request-body limit at the reverse proxy or server boundary;
+that hardening is not implemented by this assessment project.
+
+For long-audio verification, the project owner manually tested recordings
+around one hour or longer. Those requests returned transcription text with
+timestamped segments. This is a manual smoke-test result, not an automated
+test guarantee. The current endpoint processes transcription synchronously,
+so a long recording may take time and keep the HTTP request open.
 
 Temporary files are removed after both successful and failed upload or
 transcription requests. Audio and transcripts are not persisted.
@@ -236,9 +245,12 @@ Or use the environment directly:
 .\.venv\Scripts\ruff.exe check .
 ```
 
-The tests use generated audio bytes, PyAV containers, and mocked transcription
-services/models. They do not require the real Faster-Whisper model or network
-access.
+The current test suite contains 13 tests. The verified result is `13 passed`
+with one non-blocking Starlette/HTTPX deprecation warning. The tests use
+generated audio bytes, PyAV containers, and mocked transcription
+services/models. In particular, transcription service tests do not download a
+model or perform real inference. The automated suite does not replace the
+manual long-audio smoke test described above.
 
 ## Limitations and future improvements
 
